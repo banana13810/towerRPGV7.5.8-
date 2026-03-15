@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>塔RPG Ver7.5.9 自動階層版</title>
+<title>塔RPG Ver7.6 完全版</title>
 <style>
 body{font-family:sans-serif;text-align:center;background:#111;color:white;margin:0;padding:0;}
 .game{max-width:480px;margin:auto;padding:10px;}
@@ -18,7 +18,7 @@ button{margin:3px;padding:10px;font-size:16px;border-radius:6px;}
 </head>
 <body>
 <div class="game">
-<h1>🏯塔RPG Ver7.5.9 自動階層版</h1>
+<h1>🏯塔RPG Ver7.6 完全版</h1>
 
 <h3 id="enemy"></h3>
 <div class="bar"><div id="enemybar" class="enemyBar"></div></div>
@@ -36,7 +36,7 @@ button{margin:3px;padding:10px;font-size:16px;border-radius:6px;}
 <div>💰 <span id="gold"></span></div>
 
 <button id="attackBtn">⚔攻撃</button>
-<button id="autoBtn">🟢オート戦闘ON</button>
+<button id="autoBtn">🔴オート戦闘OFF</button>
 <div id="skillButtons"></div>
 
 <hr>
@@ -65,8 +65,11 @@ let inventory=[], equipment={weapon:null,armor:null,ring:null};
 let rarityList=["common","rare","epic","legend","mythic"], rarityOrder={common:1,rare:2,epic:3,legend:4,mythic:5};
 let logBox=document.getElementById("log");
 let logHistory=[];
-let autoBattleOn=true;
+let autoBattleOn=false; // 初期OFF
 let nextFloorPending=false;
+
+// 優先スキル（インデックス指定）
+let prioritySkillIndex = 2; // ⚡サンダーを優先使用
 
 // ログ（最新5件）
 function log(text){
@@ -95,7 +98,6 @@ function attack(){
   if(enemyHP<0) enemyHP=0;
   log("⚔ "+damage+" ダメージ!");
 
-  // MP固定5回復
   playerMP += 5;
   if(playerMP>playerMaxMP) playerMP=playerMaxMP;
   log("💧 5 MP回復!");
@@ -104,7 +106,7 @@ function attack(){
     gold += 10 + floor;
     exp += 5;
     dropItem();
-    nextFloorPending=true; // 次階移動フラグ
+    nextFloorPending=true;
   }
 
   enemyAttack();
@@ -264,7 +266,15 @@ function autoBattle(){
     return;
   }
   if(!autoBattleOn || enemyHP<=0) return;
-  let usable=skills.filter(s=>playerMP>=s.cost);
+
+  // 優先スキルチェック
+  if(playerMP>=skills[prioritySkillIndex].cost){
+    skills[prioritySkillIndex].action();
+    return;
+  }
+
+  // 他のスキル
+  let usable = skills.filter((s,i)=>playerMP>=s.cost && i!==prioritySkillIndex);
   if(usable.length>0){
     usable[Math.floor(Math.random()*usable.length)].action();
   } else {
@@ -280,13 +290,12 @@ update();
 document.getElementById("attackBtn").onclick=attack;
 document.getElementById("autoBtn").onclick=function(){
   autoBattleOn=!autoBattleOn;
-  this.textContent=autoBattleOn?"🟢オート戦闘ON":"🔴オート戦闘OFF";
-  log("オート戦闘 "+(autoBattleOn?"ON":"OFF"));
+  this.textContent = autoBattleOn ? "🟢オート戦闘ON" : "🔴オート戦闘OFF";
+  log("オート戦闘 " + (autoBattleOn ? "ON" : "OFF"));
 }
 
 // 1秒ごとに自動戦闘
 setInterval(autoBattle,1000);
-
 </script>
 </body>
 </html>

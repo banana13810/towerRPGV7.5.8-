@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>塔RPG Ver8.0</title>
+<title>塔RPG Ver8.1</title>
 
 <style>
 body{
@@ -28,17 +28,8 @@ border-radius:10px;
 margin:5px 0;
 }
 
-.hpbar{
-height:20px;
-background:red;
-border-radius:10px;
-}
-
-.enemybar{
-height:15px;
-background:lime;
-border-radius:10px;
-}
+.hpbar{height:20px;background:red;border-radius:10px;}
+.enemybar{height:15px;background:lime;border-radius:10px;}
 
 button{
 margin:3px;
@@ -47,6 +38,18 @@ font-size:16px;
 border-radius:6px;
 }
 
+.item{
+background:#222;
+padding:6px;
+margin:5px;
+border-radius:8px;
+}
+
+.common{color:white}
+.rare{color:#66aaff}
+.epic{color:#cc66ff}
+.legend{color:gold}
+.mythic{color:red}
 </style>
 </head>
 
@@ -54,37 +57,32 @@ border-radius:6px;
 
 <div class="game">
 
-<h2>🏯塔RPG Ver8.0</h2>
+<h2>🏯塔RPG Ver8.1</h2>
 
 <h3 id="enemy"></h3>
 
-<div class="bar">
-<div id="enemybar" class="enemybar"></div>
-</div>
-
+<div class="bar"><div id="enemybar" class="enemybar"></div></div>
 <div id="enemyHP"></div>
 
 <hr>
 
 <div>階層 <span id="floor"></span></div>
 
-<div class="bar">
-<div id="hpbar" class="hpbar"></div>
-</div>
+<div class="bar"><div id="hpbar" class="hpbar"></div></div>
 
 <div>HP <span id="hp"></span></div>
 <div>MP <span id="mp"></span></div>
-
 <div>Lv <span id="level"></span></div>
 <div>EXP <span id="exp"></span></div>
-
 <div>💰 <span id="gold"></span></div>
+
+<div>状態異常: <span id="status"></span></div>
 
 <button id="attackBtn">⚔攻撃</button>
 <button id="autoBtn">🔴オート戦闘OFF</button>
 <button onclick="next()">⬆次の階</button>
 
-<br><br>
+<br>
 
 <label>オート優先スキル
 <select id="prioritySkill">
@@ -99,6 +97,20 @@ border-radius:6px;
 <div id="skills"></div>
 
 <hr>
+
+<h3>🎒装備</h3>
+<div id="inventory"></div>
+
+<hr>
+
+<h3>🏪ショップ</h3>
+
+<button onclick="buyPotion()">HPポーション 20G</button>
+<button onclick="gacha()">装備ガチャ 100G</button>
+
+<hr>
+
+<button onclick="save()">💾セーブ</button>
 
 <div id="log"></div>
 
@@ -132,21 +144,21 @@ let auto=false
 let nextFloor=false
 let prioritySkill=2
 
+let inventory=[]
+
+let rarity=["common","rare","epic","legend","mythic"]
+
 let logHistory=[]
 
 /* ログ */
 
 function log(t){
-
 logHistory.unshift(t)
-
 if(logHistory.length>6)logHistory.pop()
-
 document.getElementById("log").innerHTML=logHistory.join("<br>")
-
 }
 
-/* 敵生成 */
+/* 敵 */
 
 function spawnEnemy(){
 
@@ -171,20 +183,11 @@ document.getElementById("enemy").innerText=enemy
 
 function playerAttack(){
 
-if(enemyHP<=0)return
-
 let dmg=attack
-
-if(Math.random()<0.15){
-
-dmg*=2
-log("⚡クリティカル")
-
-}
 
 enemyHP-=dmg
 
-log("⚔ "+dmg+"ダメージ")
+log("⚔ "+dmg)
 
 playerMP+=5
 if(playerMP>playerMaxMP)playerMP=playerMaxMP
@@ -194,9 +197,9 @@ if(enemyHP<=0){
 gold+=10+floor
 exp+=5
 
-log("敵撃破")
-
 nextFloor=true
+
+log("敵撃破")
 
 }
 
@@ -218,14 +221,9 @@ if(dmg<1)dmg=1
 
 playerHP-=dmg
 
-log("敵攻撃 "+dmg)
-
 if(playerHP<=0){
-
 alert("ゲームオーバー")
-
 location.reload()
-
 }
 
 }
@@ -237,7 +235,6 @@ function levelUp(){
 if(exp>=expMax){
 
 exp-=expMax
-
 level++
 
 expMax=Math.floor(expMax*1.4)
@@ -250,7 +247,7 @@ defense+=1
 playerHP=playerMax
 playerMP=playerMaxMP
 
-log("✨レベルアップ Lv"+level)
+log("✨Lv"+level)
 
 }
 
@@ -260,110 +257,68 @@ log("✨レベルアップ Lv"+level)
 
 let skills=[
 
-{
-name:"🔥ファイア",
-cost:20,
-action(){
-
-if(playerMP<20)return
-
-playerMP-=20
-
-enemyHP-=attack*3
-
-log("🔥ファイア")
-
-}
-
-},
-
-{
-name:"💧アイス",
-cost:15,
-action(){
-
-if(playerMP<15)return
-
-playerMP-=15
-
-enemyHP-=attack*1.5
-
-log("💧アイス")
-
-}
-
-},
-
-{
-name:"⚡サンダー",
-cost:25,
-action(){
-
-if(playerMP<25)return
-
-playerMP-=25
-
-enemyHP-=attack*2
-
-log("⚡サンダー")
-
-}
-
-},
-
-{
-name:"💖ヒール",
-cost:15,
-action(){
-
-if(playerMP<15)return
-
-playerMP-=15
-
-playerHP+=30
-
-if(playerHP>playerMax)playerHP=playerMax
-
-log("💖回復")
-
-}
-
-},
-
-{
-name:"🛡バリア",
-cost:20,
-action(){
-
-if(playerMP<20)return
-
-playerMP-=20
-
-defense+=5
-
-setTimeout(()=>defense-=5,5000)
-
-log("🛡防御UP")
-
-}
-
-}
+{name:"🔥ファイア",cost:20,action(){if(playerMP<20)return;playerMP-=20;enemyHP-=attack*3}},
+{name:"💧アイス",cost:15,action(){if(playerMP<15)return;playerMP-=15;enemyHP-=attack*1.5}},
+{name:"⚡サンダー",cost:25,action(){if(playerMP<25)return;playerMP-=25;enemyHP-=attack*2}},
+{name:"💖ヒール",cost:15,action(){if(playerMP<15)return;playerMP-=15;playerHP+=30}},
+{name:"🛡バリア",cost:20,action(){if(playerMP<20)return;playerMP-=20;defense+=5;setTimeout(()=>defense-=5,5000)}}
 
 ]
-
-/* スキル表示 */
 
 function drawSkills(){
 
 let html=""
 
 skills.forEach((s,i)=>{
-
 html+=`<button onclick="skills[${i}].action();enemyAttack();update();">${s.name}</button>`
-
 })
 
 document.getElementById("skills").innerHTML=html
+
+}
+
+/* ガチャ */
+
+function gacha(){
+
+if(gold<100)return
+
+gold-=100
+
+let r=rarity[Math.floor(Math.random()*rarity.length)]
+
+let atk=Math.floor(Math.random()*10)+5
+
+inventory.push({atk,rarity:r})
+
+drawInventory()
+
+}
+
+/* 装備 */
+
+function drawInventory(){
+
+let html=""
+
+inventory.forEach(i=>{
+html+=`<div class="item ${i.rarity}">ATK+${i.atk}</div>`
+})
+
+document.getElementById("inventory").innerHTML=html
+
+}
+
+/* ショップ */
+
+function buyPotion(){
+
+if(gold<20)return
+
+gold-=20
+
+playerHP+=50
+if(playerHP>playerMax)playerHP=playerMax
 
 }
 
@@ -374,7 +329,6 @@ function next(){
 if(!nextFloor)return
 
 floor++
-
 nextFloor=false
 
 spawnEnemy()
@@ -390,11 +344,8 @@ function autoBattle(){
 if(!auto)return
 
 if(nextFloor){
-
 next()
-
 return
-
 }
 
 let skill=skills[prioritySkill]
@@ -402,7 +353,6 @@ let skill=skills[prioritySkill]
 if(playerMP>=skill.cost){
 
 skill.action()
-
 enemyAttack()
 
 }else{
@@ -417,6 +367,20 @@ update()
 
 setInterval(autoBattle,1000)
 
+/* セーブ */
+
+function save(){
+
+let data={
+floor,level,exp,gold,inventory
+}
+
+localStorage.setItem("towerRPG",JSON.stringify(data))
+
+log("💾セーブ")
+
+}
+
 /* UI */
 
 document.getElementById("attackBtn").onclick=playerAttack
@@ -425,7 +389,7 @@ document.getElementById("autoBtn").onclick=function(){
 
 auto=!auto
 
-this.innerText=auto?"🟢オート戦闘ON":"🔴オート戦闘OFF"
+this.innerText=auto?"🟢オートON":"🔴オートOFF"
 
 }
 
@@ -442,21 +406,14 @@ function update(){
 levelUp()
 
 document.getElementById("floor").innerText=floor
-
 document.getElementById("hp").innerText=playerHP+"/"+playerMax
-
 document.getElementById("mp").innerText=playerMP+"/"+playerMaxMP
-
 document.getElementById("level").innerText=level
-
 document.getElementById("exp").innerText=exp+"/"+expMax
-
 document.getElementById("gold").innerText=gold
-
 document.getElementById("enemyHP").innerText=enemyHP+"/"+enemyMax
 
 document.getElementById("hpbar").style.width=(playerHP/playerMax*100)+"%"
-
 document.getElementById("enemybar").style.width=(enemyHP/enemyMax*100)+"%"
 
 }
@@ -464,9 +421,8 @@ document.getElementById("enemybar").style.width=(enemyHP/enemyMax*100)+"%"
 /* 開始 */
 
 spawnEnemy()
-
 drawSkills()
-
+drawInventory()
 update()
 
 </script>
